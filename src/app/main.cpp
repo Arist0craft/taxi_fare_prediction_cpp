@@ -4,6 +4,7 @@
 #include <config.hpp>
 
 #include <socket.hpp>
+#include <vector>
 
 
 const uint16_t PORT = 8080;
@@ -16,15 +17,15 @@ const std::string RESPONSE =
 
 void handle_client(http::socket_wrapper::Socket& client_socket) {
     // Чтение запроса (пропустим анализ для упрощения)
-    char buffer[1024] = {0};
-    client_socket.Recv(buffer, 1024);
+    std::vector<char> buffer(1024);
+    client_socket.Recv(buffer, buffer.size());
 
     for (auto& c: buffer) {
         std::cout << c;
     }
     std::cout << std::endl;
     // Отправка ответа
-    client_socket.Send(RESPONSE.c_str(), RESPONSE.size());
+    client_socket.Send(RESPONSE);
 }
 
 int main() {

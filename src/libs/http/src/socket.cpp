@@ -108,20 +108,30 @@ namespace http::socket_wrapper
         };
     }
 
-    size_t Socket::Send(const char* buf, size_t len) {
+    size_t Socket::Send(const std::string& message) {
         using namespace std::string_literals;
 
-        int bytes = send(fd_, buf, len, 0);
+        int bytes = send(fd_, message.c_str(), message.size(), 0);
         if (bytes == -1) {
             ThrowError("Error while sending message"s);
         }
         return bytes;
     }
 
-    size_t Socket::Recv(char* buf, size_t len) {
+    size_t Socket::Recv(std::vector<char>& buf, size_t max_bytes) {
         using namespace std::string_literals;
 
-        int bytes = recv(fd_, buf, len, 0);
+        if (buf.empty()) {
+            if (max_bytes == 0) {
+                std::string error_message = "Max bytes to read have to be great than zero"s;
+                std::cerr << error_message << '\n';
+                throw SocketError(error_message);
+            }
+
+            buf.resize(max_bytes);
+        }
+    
+        int bytes = recv(fd_, buf.data(), max_bytes, 0);
         if (bytes == -1) {
             ThrowError("Error while reading message"s);
         }

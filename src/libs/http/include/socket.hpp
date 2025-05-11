@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <string>
 #include <sys/socket.h>
+#include <vector>
 
 
 namespace http::socket_wrapper
@@ -32,8 +33,8 @@ namespace http::socket_wrapper
         );
         void Connect(const std::string& host, uint16_t port);
 
-        size_t Send(const char* buf, size_t len);
-        size_t Recv(char* buf, size_t len);
+        size_t Send(const std::string& message);
+        size_t Recv(std::vector<char>& buf, size_t max_bytes);
 
         void Bind(uint16_t port, const std::string& host = "0.0.0.0");
         void Listen(uint16_t backlog = 4096);
