@@ -18,7 +18,7 @@ const std::string RESPONSE =
 void handle_client(http::socket_wrapper::Socket& client_socket) {
     // Чтение запроса (пропустим анализ для упрощения)
     std::vector<char> buffer(1024);
-    client_socket.Recv(buffer, buffer.size());
+    client_socket.Recv(buffer.data(), buffer.size());
 
     for (auto& c: buffer) {
         std::cout << c;

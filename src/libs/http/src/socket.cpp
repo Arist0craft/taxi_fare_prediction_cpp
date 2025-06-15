@@ -31,7 +31,7 @@ namespace http::socket_wrapper
 
     Socket& Socket::operator=(Socket&& other) noexcept {
         if (this != &other) {
-            if (fd_ != 1) {
+            if (fd_ != -1) {
                 Close();
             }
 
@@ -111,6 +111,10 @@ namespace http::socket_wrapper
     size_t Socket::Send(const std::string& message) {
         using namespace std::string_literals;
 
+        if (is_closed) {
+            ThrowError("Cannot send: socket is closed"s);
+        }
+
         int bytes = send(fd_, message.c_str(), message.size(), 0);
         if (bytes == -1) {
             ThrowError("Error while sending message"s);
@@ -118,20 +122,14 @@ namespace http::socket_wrapper
         return bytes;
     }
 
-    size_t Socket::Recv(std::vector<char>& buf, size_t max_bytes) {
+    size_t Socket::Recv(char* buf, size_t max_bytes) {
         using namespace std::string_literals;
-
-        if (buf.empty()) {
-            if (max_bytes == 0) {
-                std::string error_message = "Max bytes to read have to be great than zero"s;
-                std::cerr << error_message << '\n';
-                throw SocketError(error_message);
-            }
-
-            buf.resize(max_bytes);
+        
+        if (is_closed) {
+            ThrowError("Cannot send: socket is closed");
         }
     
-        int bytes = recv(fd_, buf.data(), max_bytes, 0);
+        int bytes = recv(fd_, buf, max_bytes, 0);
         if (bytes == -1) {
             ThrowError("Error while reading message"s);
         }

@@ -48,4 +48,5 @@ _deps
 CMakeUserPresets.json
 
 # IDE
-.vscode
+.vscode/
+.cache/
