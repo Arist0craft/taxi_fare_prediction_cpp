@@ -22,6 +22,6 @@ namespace http::stream
     private:
         http::socket_wrapper::Socket& sock_;
         http::utils::RingBuffer<char> buffer_;
-        void ReadBytesToBuffer(size_t n);
+        
     };
 } // namespace http::stream

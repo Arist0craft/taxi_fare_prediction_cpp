@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <iterator>
 #include <memory>
 #include <stdexcept>
@@ -22,6 +23,16 @@ namespace http::utils {
                 pos_ = (pos_ + 1) % container_->capacity_;
                 ++steps_;
                 return *this;
+            }
+
+            iterator operator+(size_t n) const {
+                if (n > container_->size_) {
+                    n = container_->size_;
+                }
+
+                return iterator(
+                    container_, (pos_ + n) % container_->capacity_, steps_ + n
+                );
             }
 
             bool operator==(const iterator& other) const noexcept {

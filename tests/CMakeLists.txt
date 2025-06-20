@@ -3,6 +3,7 @@ include(GoogleTest)
 
 add_executable(tests
     test_ring_buffer.cpp
+    test_socket.cpp
 )
 
 target_include_directories(tests 

@@ -79,7 +79,6 @@ namespace http::socket_wrapper
             host.c_str(), std::to_string(port).c_str(), &hints, &result_addrinfo
         );
         if(status != 0) {
-            freeaddrinfo(result_addrinfo);
             ThrowAddInfoError("Error while getting address info"s, status);
         };
 
@@ -151,10 +150,16 @@ namespace http::socket_wrapper
         );
 
         if(status != 0) {
-            freeaddrinfo(result_addrinfo);
             ThrowAddInfoError("Error while getting address info"s, status);
-
         };
+
+        if (is_closed) {
+            Create(
+                result_addrinfo->ai_family, 
+                result_addrinfo->ai_socktype, 
+                result_addrinfo->ai_protocol
+            );
+        }
 
         status = bind(
             fd_, result_addrinfo->ai_addr, result_addrinfo->ai_addrlen

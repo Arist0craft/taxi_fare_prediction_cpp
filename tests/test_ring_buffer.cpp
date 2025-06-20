@@ -123,6 +123,31 @@ TEST(RingBufferTest, FrontAndBackThrowOnEmpty) {
     EXPECT_THROW(buffer.back(), std::runtime_error);
 }
 
+TEST(RingBufferTest, IteratorAdditionSkipsElementsCorrectly) {
+    RingBuffer<int> buffer(5);  // capacity = 5
+
+    // Пишем данные: 10, 20, 30
+    int input[] = {10, 20, 30};
+    buffer.Write(input, 3);
+
+    // Получаем итератор на начало
+    auto it = buffer.begin();
+
+    // Сдвигаем на 2
+    auto it2 = it + 2;
+
+    // Проверяем, что значение верное (30)
+    EXPECT_EQ(*it2, 30);
+
+    // Проверяем, что it + 3 == end()
+    auto it3 = it + 3;
+    EXPECT_EQ(it3, buffer.end());
+
+    // Проверяем, что it + 4 не выйдет за буфер
+    auto it4 = it + 10;  // будет обрезано до size == 3
+    EXPECT_EQ(it4, buffer.end());
+}
+
 TEST(RingBufferTest, HandlesWrapAroundCorrectly) {
     RingBuffer<int> buffer(3);
     
