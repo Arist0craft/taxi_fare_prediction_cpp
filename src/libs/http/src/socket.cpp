@@ -1,11 +1,16 @@
 #include "socket.hpp"
 
+#include <arpa/inet.h>
+#include <cstdint>
 #include <iostream>
+#include <string>
+#include <sys/_types/_socklen_t.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <cstring> 
 #include <cerrno>
+#include <utility>
 
 
 namespace http::socket_wrapper
@@ -47,7 +52,7 @@ namespace http::socket_wrapper
     }
 
     void Socket::Close() {
-        if(!is_closed) {
+        if(fd_ != -1 && !is_closed) {
             close(fd_);
             fd_ = -1;
             is_closed = true;
@@ -224,6 +229,36 @@ namespace http::socket_wrapper
 
         return Socket(client_fd, false, false);
     }
+
+    std::pair<std::string, uint16_t> Socket::GetLocalAddress() {
+        std::pair<std::string, uint16_t> res;
+
+        sockaddr addr;
+        socklen_t addr_len = sizeof(addr);
+        getsockname(fd_, &addr, &addr_len);
+
+        if (addr.sa_family == AF_INET) {
+            // IPv4
+            sockaddr_in* addr_in = (sockaddr_in*)&addr;
+            res.second = ntohs(addr_in->sin_port);
+            
+            char ip_buffer[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &addr_in->sin_addr, ip_buffer, INET_ADDRSTRLEN);
+            res.first = std::string(ip_buffer);
+            
+        } else if (addr.sa_family == AF_INET6) {
+            // IPv6
+            sockaddr_in6* addr_in6 = (sockaddr_in6*)&addr;
+            res.second = ntohs(addr_in6->sin6_port);
+            
+            char ip_buffer[INET6_ADDRSTRLEN];
+            inet_ntop(AF_INET6, &addr_in6->sin6_addr, ip_buffer, INET6_ADDRSTRLEN);
+            res.first = std::string(ip_buffer);
+        }
+        
+        return res;
+    }
+
 
     void Socket::ThrowError(const std::string& message) {
         using namespace std::string_literals;

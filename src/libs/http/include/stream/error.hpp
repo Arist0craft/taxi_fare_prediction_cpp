@@ -1,3 +1,8 @@
+#pragma once
+
+#include <stdexcept>
+#include <string>
+
 namespace http::stream
 {
     class StreamError: public std::runtime_error {
@@ -6,7 +11,4 @@ namespace http::stream
         explicit StreamError(const std::string& msg)
             : std::runtime_error(msg) {}
     };
-} // namespace http:stream
-
-
-
+} // namespace http::stream

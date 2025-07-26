@@ -1,76 +1,89 @@
 #include "stream/reader.hpp"
-#include "stream/error.hpp"
 
 #include <algorithm>
-#include <array>
+#include <cstddef>
 #include <string>
 
 namespace http::stream
 {
     StreamReader::StreamReader(socket_wrapper::Socket& sock)
         : sock_(sock), buffer_(MAX_READER_BUFFER_SIZE) {}
+    
+    std::string StreamReader::ReadUntil(const std::string& delimiter) {
+        return ReadUntil(delimiter.begin(), delimiter.end());
+    }
 
     std::string StreamReader::ReadLine() {
-        std::array<char, 2> crlf = {'\r', '\n'};
-
-        while (write_pos_ - read_pos_ < MAX_LINE_LENGTH) {
-            auto search_start_it = buffer_.begin() + start_search_pos;
-            auto search_end_it = buffer_.begin() + write_pos_;
-
-            auto it = std::search(
-                search_start_it, 
-                search_end_it, 
-                crlf.begin(),
-                crlf.end()
-            );
-            if (it != search_end_it) {
-                std::string res(
-                    buffer_.begin() + read_pos_, it
-                );
-                read_pos_ = std::distance(buffer_.begin(), it) + 2; // +2 to skip \r\n
-                return res;
-            }
-
-            start_search_pos = write_pos_;
-            ReadBytesToBuffer(BUFFER_READ_SIZE);
-        }
-
-        throw StreamError(
-            "Client sent invalid or incomplete line (\\r\\n not found)"
-        );
-        return std::string();
+        return ReadUntil("\r\n");
     }
 
     std::string StreamReader::ReadBytes(size_t n) {
-        if (n < 1) {
-            sock_.Close();
-
+        while (buffer_.GetReadSize() < n) {
+            auto read_bytes = ReadBytesToBuffer(n - buffer_.GetReadSize());
+            if (read_bytes == 0) {
+                throw StreamError("Not enough data to read");
+            }
+        
         }
-        return std::string();
+        std::string res(n, '\0');
+        buffer_.Read(res.begin(), n);
+        return res;
     }
 
-    void StreamReader::ReadBytesToBuffer(size_t n) {
-        size_t bytes_read = 0;
-        while (n > 0) {
-            if (write_pos_ + n  > MAX_READER_BUFFER_SIZE) {
-                    throw StreamError("Buffer overflow");
-            }
-
-            if (buffer_.size() < write_pos_ + n) {
-                buffer_.resize(write_pos_ + n, 0);
-            }
-
-            bytes_read = sock_.Recv(
-                buffer_.data() + write_pos_, n
-            );
-
-            if (bytes_read == 0) {
-                throw StreamError("Connection closed while reading from stream");
-            }
-            write_pos_ += bytes_read;
-
-            n -= bytes_read;
+    size_t StreamReader::ReadBytesToBuffer(size_t n) {
+        if (buffer_.GetWriteSize() < n) {
+            throw StreamError("Not enough space in buffer");
         }
+
+        n = std::min(n, buffer_.GetLinearWriteSize());
+
+        n = sock_.Recv(buffer_.GetWritePtr(), n);
+        buffer_.CommitWrite(n);
+        return n;
     }
 
+    std::string StreamReader::Peek(size_t n) {
+        while (buffer_.GetReadSize() < n) {
+            auto read_bytes = ReadBytesToBuffer(n - buffer_.GetReadSize());
+            if (read_bytes == 0) {
+                break;
+            }
+        }
+
+        size_t to_read = std::min(n, buffer_.GetReadSize());
+        std::string result(to_read, '\0');
+
+        auto it = buffer_.begin();
+        for (size_t i = 0; i < to_read; ++i, ++it) {
+            result[i] = *it;
+        }
+        
+        return result;
+    }
+
+
+    std::string StreamReader::Skip(size_t n) {
+        size_t total_skipped = 0;
+        
+        while (total_skipped < n) {
+            // Сначала пропускаем то, что есть в буфере
+            size_t available_in_buffer = buffer_.GetReadSize();
+            size_t to_skip_from_buffer = std::min(n - total_skipped, available_in_buffer);
+            
+            if (to_skip_from_buffer > 0) {
+                buffer_.Skip(to_skip_from_buffer);
+                total_skipped += to_skip_from_buffer;
+            }
+            
+            // Если нужно пропустить больше, читаем новые данные
+            if (total_skipped < n) {
+                auto read_bytes = ReadBytesToBuffer(BUFFER_READ_SIZE);
+                if (read_bytes == 0) {
+                    break; // Больше данных нет
+                }
+            }
+        }
+        
+        return std::to_string(total_skipped); // Возвращаем количество пропущенных байт
+    }
 } // namespace http::stream

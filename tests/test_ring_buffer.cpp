@@ -170,3 +170,103 @@ TEST(RingBufferTest, HandlesWrapAroundCorrectly) {
     EXPECT_EQ(second_read[1], 4);
     EXPECT_EQ(second_read[2], 5);
 }
+
+TEST(RingBufferTest, IteratorWorksWithStdSearch) {
+    RingBuffer<char> buffer(10);
+    
+    // Записываем данные
+    std::string data = "hello\r\nworld";
+    buffer.Write(data.begin(), data.end());
+    
+    // Ищем \r\n
+    std::array<char, 2> crlf = {'\r', '\n'};
+    auto it = std::search(buffer.begin(), buffer.end(), crlf.begin(), crlf.end());
+    
+    EXPECT_NE(it, buffer.end());
+    EXPECT_EQ(*it, '\r');
+}
+
+TEST(RingBufferTest, IteratorWorksWithStdSearchWrapped) {
+    RingBuffer<char> buffer(8);
+    
+    // Записываем данные так, чтобы они "обернулись" вокруг буфера
+    std::string data1 = "hello";
+    std::string data2 = "\r\nworld";
+    
+    buffer.Write(data1.begin(), data1.end());
+    buffer.Skip(3); // Освобождаем место в начале
+    buffer.Write(data2.begin(), data2.end());
+    
+    // Теперь данные: "lo\r\nwo"
+    std::array<char, 2> crlf = {'\r', '\n'};
+    auto it = std::search(buffer.begin(), buffer.end(), crlf.begin(), crlf.end());
+    
+    EXPECT_NE(it, buffer.end());
+    EXPECT_EQ(*it, '\r');
+}
+
+TEST(RingBufferTest, IteratorWorksWithStdSearchNotFound) {
+    RingBuffer<char> buffer(10);
+    
+    // Записываем данные без \r\n
+    std::string data = "hello world";
+    buffer.Write(data.begin(), data.end());
+    
+    // Ищем \r\n
+    std::array<char, 2> crlf = {'\r', '\n'};
+    auto it = std::search(buffer.begin(), buffer.end(), crlf.begin(), crlf.end());
+    
+    EXPECT_EQ(it, buffer.end());
+}
+
+TEST(RingBufferTest, IteratorWorksWithStdSearchEmptyBuffer) {
+    RingBuffer<char> buffer(10);
+    
+    // Пустой буфер
+    std::array<char, 2> crlf = {'\r', '\n'};
+    auto it = std::search(buffer.begin(), buffer.end(), crlf.begin(), crlf.end());
+    
+    EXPECT_EQ(it, buffer.end());
+}
+
+TEST(RingBufferTest, IteratorWorksWithStdSearchPartialMatch) {
+    RingBuffer<char> buffer(10);
+    
+    // Записываем данные с частичным совпадением
+    std::string data = "hello\rworld";
+    buffer.Write(data.begin(), data.end());
+    
+    // Ищем \r\n (найдем только \r)
+    std::array<char, 2> crlf = {'\r', '\n'};
+    auto it = std::search(buffer.begin(), buffer.end(), crlf.begin(), crlf.end());
+    
+    EXPECT_EQ(it, buffer.end()); // Не должно найти полное совпадение
+}
+
+TEST(RingBufferTest, IteratorWorksWithStdSearchAtEnd) {
+    RingBuffer<char> buffer(10);
+    
+    // Записываем данные с \r\n в конце
+    std::string data = "hello\r\n";
+    buffer.Write(data.begin(), data.end());
+    
+    std::array<char, 2> crlf = {'\r', '\n'};
+    auto it = std::search(buffer.begin(), buffer.end(), crlf.begin(), crlf.end());
+    
+    EXPECT_NE(it, buffer.end());
+    EXPECT_EQ(*it, '\r');
+}
+
+TEST(RingBufferTest, IteratorWorksWithStdSearchAtBeginning) {
+    RingBuffer<char> buffer(10);
+    
+    // Записываем данные с \r\n в начале
+    std::string data = "\r\nhello";
+    buffer.Write(data.begin(), data.end());
+    
+    std::array<char, 2> crlf = {'\r', '\n'};
+    auto it = std::search(buffer.begin(), buffer.end(), crlf.begin(), crlf.end());
+    
+    EXPECT_NE(it, buffer.end());
+    EXPECT_EQ(*it, '\r');
+}

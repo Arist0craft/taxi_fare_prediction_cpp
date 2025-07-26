@@ -4,6 +4,8 @@
 #include <stdexcept>
 #include <string>
 #include <sys/socket.h>
+#include <utility>
+
 
 namespace http::socket_wrapper
 {
@@ -37,6 +39,7 @@ namespace http::socket_wrapper
         void Bind(uint16_t port, const std::string& host = "0.0.0.0");
         void Listen(uint16_t backlog = 4096);
         Socket Accept(std::string& client_host, uint16_t& client_port);
+        std::pair<std::string, uint16_t> GetLocalAddress();
 
     private:
         void ThrowError(const std::string& message); 
